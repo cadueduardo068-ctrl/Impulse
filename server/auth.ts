@@ -1,3 +1,5 @@
+import { queueAfterTransactionHook } from "@better-auth/core/context";
+import { deliverAuthLink } from "./auth-mail.js";
 import { betterAuth } from "better-auth";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
@@ -51,6 +53,17 @@ export async function sendMail(to: string, subject: string, text: string) {
     );
   }
 }
+async function sendAccountEmail(
+  email: string,
+  url: string,
+  subject: string,
+  text: string,
+) {
+  if (config.supabaseAuthMail)
+    return queueAfterTransactionHook(() => deliverAuthLink(email, url));
+  return sendMail(email, subject, text);
+}
+
 export const auth = betterAuth({
   baseURL: config.url,
   secret: config.secret,
@@ -88,6 +101,26 @@ export const auth = betterAuth({
           });
         }
       }
+      if (
+        ctx.path === "/request-password-reset" &&
+        config.supabaseAuthMail &&
+        typeof ctx.body?.email === "string"
+      ) {
+        try {
+          await transaction((tx) =>
+            rate(
+              tx,
+              "auth-mail-recovery:" + hash(ctx.body.email.trim().toLowerCase()),
+              1,
+              60,
+            ),
+          );
+        } catch {
+          throw new APIError("TOO_MANY_REQUESTS", {
+            message: "Aguarde um minuto antes de solicitar outro link.",
+          });
+        }
+      }
       if (ctx.path === "/sign-up/email" && ctx.body?.termsAccepted !== true)
         throw new APIError("BAD_REQUEST", {
           message: "É necessário aceitar os Termos de Uso",
@@ -119,20 +152,31 @@ export const auth = betterAuth({
     maxPasswordLength: 128,
     requireEmailVerification: false,
     revokeSessionsOnPasswordReset: true,
-    sendResetPassword: async ({ user, url }) =>
-      sendMail(
-        user.email,
-        "Redefina sua senha · Impulsa",
-        `Acesse para redefinir sua senha: ${url}`,
-      ),
+    sendResetPassword: async ({ user, url }) => {
+      try {
+        await sendAccountEmail(
+          user.email,
+          url,
+          "Redefina sua senha · Impulsa",
+          `Acesse para redefinir sua senha: ${url}`,
+        );
+      } catch (error) {
+        if (!config.supabaseAuthMail) throw error;
+        // Keep the public recovery response identical for existing and unknown accounts.
+        console.warn(
+          "Não foi possível entregar o link de recuperação do Impulsa.",
+        );
+      }
+    },
   },
   emailVerification: {
     sendOnSignUp: true,
     autoSignInAfterVerification: true,
     expiresIn: 3600,
     sendVerificationEmail: async ({ user, url }) =>
-      sendMail(
+      sendAccountEmail(
         user.email,
+        url,
         "Confirme seu e-mail · Impulsa",
         `Confirme seu endereço: ${url}`,
       ),
@@ -142,7 +186,12 @@ export const auth = betterAuth({
       enabled: true,
       updateEmailWithoutVerification: true,
       sendChangeEmailConfirmation: async ({ user, url }) =>
-        sendMail(user.email, "Confirme a alteração de e-mail · Impulsa", url),
+        sendAccountEmail(
+          user.email,
+          url,
+          "Confirme a alteração de e-mail · Impulsa",
+          url,
+        ),
     },
   },
   session: {

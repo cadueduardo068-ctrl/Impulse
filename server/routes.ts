@@ -1,3 +1,4 @@
+import { emailDeliveryMode, redeemAuthLink } from "./auth-mail.js";
 import {
   Router,
   type Request,
@@ -162,7 +163,25 @@ router.get(
   "/email-status",
   json(async (req) => {
     await actor(req);
-    return { mode: process.env.SMTP_HOST ? "smtp" : "development-capture" };
+    return { mode: emailDeliveryMode() };
+  }),
+);
+router.post(
+  "/auth-mail/redeem",
+  json(async (req) => {
+    const body = z
+      .object({
+        ticket: z.string().regex(/^[a-zA-Z0-9_-]{43}$/),
+        code: z.string().min(1).max(1024),
+        flowId: z.string().min(1).max(128).optional(),
+      })
+      .parse(req.body);
+    return redeemAuthLink(
+      body.ticket,
+      body.code,
+      body.flowId,
+      req.ip ?? "unknown",
+    );
   }),
 );
 router.get("/config", (_req, res) =>
@@ -177,7 +196,7 @@ router.get("/config", (_req, res) =>
     termsVersion: config.termsVersion,
     privacyVersion: config.privacyVersion,
     integrations: {
-      mail: !!process.env.SMTP_HOST,
+      mail: emailDeliveryMode() !== "development-capture",
       billing: billingConfigured(),
       ai: !!process.env.AI_API_KEY,
       search: !!process.env.BRAVE_SEARCH_API_KEY,

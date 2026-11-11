@@ -17,14 +17,33 @@ if (production && !process.env.DATABASE_URL)
   throw new Error("Configure PostgreSQL externo em produção");
 if (production && secret.length < 32)
   throw new Error("Use BETTER_AUTH_SECRET com no mínimo 32 caracteres");
+const supabaseUrl =
+  process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey =
+  process.env.SUPABASE_PUBLISHABLE_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+if (
+  (supabaseUrl || supabaseKey) &&
+  (!supabaseUrl ||
+    !supabaseKey ||
+    new URL(supabaseUrl).protocol !== "https:" ||
+    !/^sb_publishable_[a-zA-Z0-9_-]+$/.test(supabaseKey))
+)
+  throw new Error(
+    "Configure a URL HTTPS e a chave publicável do Supabase juntas",
+  );
+
 if (
   production &&
   (!process.env.APP_URL?.startsWith("https://") ||
-    !process.env.SMTP_HOST ||
-    !process.env.MAIL_FROM)
+    (!supabaseUrl && (!process.env.SMTP_HOST || !process.env.MAIL_FROM)))
 )
-  throw new Error("HTTPS e SMTP são obrigatórios em produção");
+  throw new Error(
+    "Configure HTTPS e um provedor de e-mail para autenticação em produção",
+  );
 export const config = {
+  supabaseAuthMail:
+    supabaseUrl && supabaseKey ? { url: supabaseUrl, key: supabaseKey } : null,
   production,
   secret,
   url: process.env.APP_URL ?? "http://localhost:3000",

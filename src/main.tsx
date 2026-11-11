@@ -1,3 +1,4 @@
+import { AuthEmailCallback } from "./auth-email-callback";
 import React, { lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -32,6 +33,10 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/cadastro" element={<AuthPage signup />} />
           <Route path="/recuperar" element={<AuthPage recovery />} />
           <Route path="/redefinir-senha" element={<AuthPage reset />} />
+          <Route
+            path="/confirmar-email/:ticket"
+            element={<AuthEmailCallback />}
+          />
           <Route path="/app/*" element={<Workspace />} />
           <Route path="/demonstracao" element={<Workspace demo />} />
           <Route path="/proposta/:token" element={<SharedQuote />} />

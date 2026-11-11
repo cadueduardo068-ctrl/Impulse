@@ -19,6 +19,7 @@ export function EmailPending({
   const [seconds, setSeconds] = useState(0);
   const [delivery, setDelivery] = useState<string | null>(null);
   const local = delivery === "development-capture";
+  const sending = delivery === "smtp" || delivery === "supabase";
   const localAddress = /\.local$/i.test(email);
   useEffect(() => {
     let active = true;
@@ -71,12 +72,12 @@ export function EmailPending({
                 </p>
               )}
             </>
-          ) : delivery === "smtp" && localAddress ? (
+          ) : sending && localAddress ? (
             <p>
               Endereços terminados em <strong>.local</strong> não recebem
               e-mails pela internet. Corrija o endereço para receber o link.
             </p>
-          ) : delivery === "smtp" ? (
+          ) : sending ? (
             <p>
               Confira a caixa de entrada e o spam. O link de confirmação vale
               por uma hora.
@@ -101,7 +102,7 @@ export function EmailPending({
               seconds > 0 ||
               !delivery ||
               delivery === "unknown" ||
-              (delivery === "smtp" && localAddress)
+              (sending && localAddress)
             }
             onClick={() =>
               void a.run(async () => {

@@ -63,3 +63,38 @@ Consulte o [relatório desta entrega](docs/ENTREGA.md) para ver as verificaçõe
 
 
 
+
+### Usar o SMTP do Supabase para as mensagens de acesso
+
+O Impulsa mantém o Better Auth para contas, senhas, sessões e permissões. Quando
+`SUPABASE_URL` e `SUPABASE_PUBLISHABLE_KEY` estão preenchidas no ambiente do
+servidor, o Supabase Auth entrega os links de confirmação, reenvio e
+recuperação usando o SMTP do projeto. O Supabase pode registrar o destinatário
+em **Authentication → Users** para entregar o link. O Impulsa não usa esse
+registro como conta de acesso nem compartilha a senha do usuário com o Supabase.
+
+1. Em **Authentication → URL Configuration**, coloque a origem do Impulsa
+   em **Site URL**. Para o servidor local desta cópia, use
+   `http://localhost:4317`. Na hospedagem, use o endereço HTTPS do site.
+2. Em **Redirect URLs**, adicione
+   `http://localhost:4317/confirmar-email/**` para teste local. Adicione
+   também `https://seu-dominio/confirmar-email/**` para produção. Use a mesma
+   origem definida em `APP_URL` no servidor do Impulsa.
+3. Habilite o provedor **Email** e novos cadastros no Supabase Auth. Confira o
+   SMTP e o remetente que você já configurou. Nos modelos **Magic Link** e
+   **Confirm signup**, use `{{ .ConfirmationURL }}` como destino do botão
+   para manter o redirecionamento seguro. Um texto genérico como **Continuar
+   no Impulsa** serve tanto para confirmação quanto para recuperação.
+4. Reinicie o Impulsa e confira cadastro, reenvio e recuperação com um
+   endereço real. Se a mensagem não chegar, veja os registros de
+   **Authentication** no Supabase e o status de entrega no painel do
+   provedor SMTP.
+
+A recuperação retorna a mesma mensagem para endereços cadastrados e
+desconhecidos. A página de confirmação solicita um clique antes de continuar
+para proteger o uso único do link. Convites de equipe e avisos operacionais
+continuam usando o SMTP direto do Impulsa, se configurado.
+
+[URLs de redirecionamento](https://supabase.com/docs/guides/auth/redirect-urls) ·
+[Modelos de e-mail](https://supabase.com/docs/guides/auth/auth-email-templates) ·
+[SMTP no Supabase](https://supabase.com/docs/guides/auth/auth-smtp)

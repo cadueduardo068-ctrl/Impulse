@@ -79,8 +79,8 @@ export function EmailPending({
             </p>
           ) : sending ? (
             <p>
-              Confira a caixa de entrada e o spam. O link de confirmação vale
-              por uma hora.
+              Confira a caixa de entrada e o spam. Se a mensagem não chegou,
+              solicite um reenvio. O link vale por uma hora.
             </p>
           ) : delivery === "unknown" ? (
             <p>

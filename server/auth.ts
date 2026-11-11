@@ -1,4 +1,7 @@
-import { queueAfterTransactionHook } from "@better-auth/core/context";
+import {
+  queueAfterTransactionHook,
+  tryGetCurrentAuthEndpointContext,
+} from "@better-auth/core/context";
 import { deliverAuthLink } from "./auth-mail.js";
 import { betterAuth } from "better-auth";
 import { APIError, createAuthMiddleware } from "better-auth/api";
@@ -59,8 +62,19 @@ async function sendAccountEmail(
   subject: string,
   text: string,
 ) {
-  if (config.supabaseAuthMail)
-    return queueAfterTransactionHook(() => deliverAuthLink(email, url));
+  if (config.supabaseAuthMail) {
+    const signup =
+      tryGetCurrentAuthEndpointContext()?.path === "/sign-up/email";
+    return queueAfterTransactionHook(() => deliverAuthLink(email, url), {
+      // A conta já foi criada. O usuário pode entrar e solicitar o reenvio.
+      onError: signup
+        ? () =>
+            console.warn(
+              "E-mail inicial indisponível. O reenvio continua disponível.",
+            )
+        : undefined,
+    });
+  }
   return sendMail(email, subject, text);
 }
 

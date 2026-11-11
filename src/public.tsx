@@ -592,6 +592,28 @@ export function Footer() {
     </footer>
   );
 }
+function authFormError(
+  error: { status?: number; code?: string },
+  signup: boolean,
+) {
+  if (
+    error.code === "INVALID_ORIGIN" ||
+    error.code === "MISSING_OR_NULL_ORIGIN"
+  )
+    return "Este endereço não está autorizado para acessar sua conta. Abra o Impulsa pelo endereço configurado no servidor.";
+  if (error.status === 429)
+    return "Muitas tentativas. Aguarde um minuto e tente novamente.";
+  if (signup && error.code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL")
+    return "Já existe uma conta com este e-mail. Entre ou use Esqueci minha senha.";
+  if (
+    !signup &&
+    (error.code === "INVALID_EMAIL_OR_PASSWORD" || error.status === 401)
+  )
+    return "E-mail ou senha incorretos. Se esqueceu a senha, use o link abaixo.";
+  return signup
+    ? "Não foi possível criar a conta agora. Confira os dados e tente novamente."
+    : "O serviço de login está indisponível no momento. Tente novamente em instantes.";
+}
 export function AuthPage({
   signup = false,
   recovery = false,
@@ -712,25 +734,14 @@ export function AuthPage({
                     promotional: f.get("promo") === "on",
                   } as any),
                 });
-                if (r.error)
-                  throw new Error(
-                    "Não foi possível criar a conta. Verifique os dados ou tente recuperar seu acesso.",
-                  );
+                if (r.error) throw new Error(authFormError(r.error, true));
                 navigate("/app");
               } else {
                 const r = await authClient.signIn.email({
                   email,
                   password: String(f.get("password")),
                 });
-                if (r.error)
-                  throw new Error(
-                    r.error.status === 429
-                      ? "Muitas tentativas de entrada. Aguarde um minuto e tente novamente."
-                      : r.error.code === "INVALID_EMAIL_OR_PASSWORD" ||
-                          r.error.status === 401
-                        ? "E-mail ou senha incorretos. Se esqueceu a senha, use o link abaixo."
-                        : "Não foi possível entrar agora. Tente novamente.",
-                  );
+                if (r.error) throw new Error(authFormError(r.error, false));
                 if ((r.data as any)?.twoFactorRedirect) {
                   setTwoFactor(true);
                   return;

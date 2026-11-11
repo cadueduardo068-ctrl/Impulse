@@ -126,3 +126,29 @@ it("delivers signup, resend and recovery through Supabase and binds each link to
   );
   expect(result.rows[0].emailVerified).toBe(true);
 });
+
+it("mantém a conta acessível quando o primeiro e-mail falha e permite reenviar", async () => {
+  const delivery = vi.fn(async () =>
+    Response.json({ code: "unexpected_failure" }, { status: 503 }),
+  );
+  vi.stubGlobal("fetch", delivery);
+  const email = "signup-mail-outage@example.test";
+  const password = "Test.Outage.Password.123";
+  const signup = await auth.api.signUpEmail({
+    body: {
+      email,
+      name: "Teste de cadastro",
+      password,
+      termsAccepted: true,
+    } as never,
+  });
+  expect(delivery).toHaveBeenCalledTimes(1);
+  expect(signup.user.emailVerified).toBe(false);
+  const login = await auth.api.signInEmail({ body: { email, password } });
+  expect(login.user.id).toBe(signup.user.id);
+  delivery.mockResolvedValueOnce(Response.json({}));
+  await auth.api.sendVerificationEmail({
+    body: { email, callbackURL: "/app" },
+  });
+  expect(delivery).toHaveBeenCalledTimes(2);
+});

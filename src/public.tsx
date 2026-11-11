@@ -681,14 +681,23 @@ export function AuthPage({
                 setMessage("Senha alterada. Entre com a nova senha.");
                 return;
               }
-              const email = String(f.get("email"));
+              const email = String(f.get("email")).trim();
               if (recovery) {
-                await authClient.requestPasswordReset({
+                const result = await authClient.requestPasswordReset({
                   email,
                   redirectTo: `${location.origin}/redefinir-senha`,
                 });
+                if (result.error)
+                  throw new Error(
+                    result.error.status === 429
+                      ? "Aguarde um minuto antes de solicitar outro link."
+                      : "Não foi possível solicitar a redefinição. Tente novamente.",
+                  );
+                const settings = await api("/config").catch(() => null);
                 setMessage(
-                  "Se houver uma conta, enviaremos as instruções. No desenvolvimento sem SMTP, consulte .data/mail no servidor.",
+                  settings?.integrations.mail === false
+                    ? "Se houver uma conta, o link ficará na caixa de saída local do Impulsa."
+                    : "Se houver uma conta, confira as instruções na caixa de entrada e no spam.",
                 );
                 return;
               }
@@ -715,7 +724,12 @@ export function AuthPage({
                 });
                 if (r.error)
                   throw new Error(
-                    "Não foi possível entrar. Confira seus dados e confirme seu e-mail.",
+                    r.error.status === 429
+                      ? "Muitas tentativas de entrada. Aguarde um minuto e tente novamente."
+                      : r.error.code === "INVALID_EMAIL_OR_PASSWORD" ||
+                          r.error.status === 401
+                        ? "E-mail ou senha incorretos. Se esqueceu a senha, use o link abaixo."
+                        : "Não foi possível entrar agora. Tente novamente.",
                   );
                 if ((r.data as any)?.twoFactorRedirect) {
                   setTwoFactor(true);

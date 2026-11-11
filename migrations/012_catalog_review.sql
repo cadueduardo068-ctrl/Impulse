@@ -1,0 +1,1 @@
+CREATE POLICY requests_platform_admin ON catalog_requests FOR ALL USING(EXISTS(SELECT 1 FROM platform_admins WHERE user_id=current_setting('app.user_id',true))) WITH CHECK(EXISTS(SELECT 1 FROM platform_admins WHERE user_id=current_setting('app.user_id',true)));

@@ -6,3 +6,4 @@ dist-server/
 test-results/
 playwright-report/
 *.log
+.wrangler/

@@ -13,7 +13,8 @@
     "test:e2e": "playwright test",
     "db:migrate": "node --env-file-if-exists=.env --import tsx server/migrate.ts",
     "db:backup": "node --env-file-if-exists=.env scripts/backup.mjs",
-    "format": "prettier --write src server shared tests scripts *.ts *.json *.js *.html public/*.js public/*.html public/*.webmanifest docs/*.md README.md"
+    "format": "prettier --write src server shared tests scripts *.ts *.json *.js *.html public/*.js public/*.html public/*.webmanifest docs/*.md README.md",
+    "test:worker": "node --experimental-strip-types --test tests/worker-auth-http.mjs"
   },
   "dependencies": {
     "@better-auth/core": "1.7.18",

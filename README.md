@@ -98,3 +98,8 @@ continuam usando o SMTP direto do Impulsa, se configurado.
 [URLs de redirecionamento](https://supabase.com/docs/guides/auth/redirect-urls) ·
 [Modelos de e-mail](https://supabase.com/docs/guides/auth/auth-email-templates) ·
 [SMTP no Supabase](https://supabase.com/docs/guides/auth/auth-smtp)
+
+## Cloudflare Workers
+
+Para publicar o frontend no Workers e encaminhar a API ao backend Node,
+siga [a configuração do Cloudflare](docs/CLOUDFLARE.md).

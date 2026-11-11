@@ -6,7 +6,7 @@ Node 24 LTS. `npm ci` usa o lockfile. Copie `.env.example` para `.env` e execute
 
 ## Produção (não realizada nesta entrega)
 
-Use um serviço Node persistente com suporte a PostgreSQL, SMTP e HTTPS terminando em proxy reverso confiável. Este projeto usa Node, `pg`, `pdfkit` e `multer`; não é um pacote para Cloudflare Workers ou hospedagem estática. Não houve registro nem deploy em Sites.
+Use um serviço Node persistente com suporte a PostgreSQL, SMTP e HTTPS terminando em proxy reverso confiável. O backend usa Node, `pg`, `pdfkit` e `multer`. Para servir o frontend no Cloudflare Workers com um backend Node separado, consulte [a configuração do Cloudflare](CLOUDFLARE.md).
 
 1. Instale dependências e compile com `npm ci` e `npm run build`.
 2. Provisione PostgreSQL 16+ e dois papéis: migrador/dono com `BYPASSRLS`, apenas para tarefas de administração; e aplicação com `NOSUPERUSER NOBYPASSRLS`, sem propriedade de tabelas/funções. Não forneça a credencial migradora ao processo web.

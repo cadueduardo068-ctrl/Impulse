@@ -1,4 +1,58 @@
 import { test, expect } from "@playwright/test";
+
+test("navegação pública fixa e demonstração com API indisponível", async ({
+  page,
+}, info) => {
+  await page.route("**/api/config", (route) =>
+    route.fulfill({ status: 503, json: { error: "Serviço indisponível" } }),
+  );
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Rejeitar opcionais" }).click();
+  const nav = page.getByRole("navigation", { name: "Navegação principal" });
+  const menu = page.getByRole("button", { name: "Abrir menu" });
+  if (info.project.name !== "desktop") {
+    await menu.click();
+    await expect(
+      menu.or(page.getByRole("button", { name: "Fechar menu" })),
+    ).toHaveAttribute("aria-expanded", "true");
+    await page.keyboard.press("Escape");
+    await expect(menu).toBeFocused();
+  }
+  for (const [label, id] of [
+    ["Funcionalidades", "funcionalidades"],
+    ["Para seu negócio", "solucoes"],
+    ["Como funciona", "como-funciona"],
+    ["Planos", "planos"],
+  ]) {
+    if (info.project.name !== "desktop") await menu.click();
+    await nav.getByRole("link", { name: label, exact: true }).click();
+    await expect(page).toHaveURL(new RegExp("#" + id + "$"));
+    await expect
+      .poll(async () =>
+        page.locator("#" + id).evaluate((section) => {
+          const top = section.getBoundingClientRect().top;
+          return top >= 70 && top <= 115;
+        }),
+      )
+      .toBe(true);
+    await expect(page.locator(".landing-header")).toHaveCSS(
+      "position",
+      "sticky",
+    );
+  }
+  const hero = page.locator(".landing-hero");
+  await expect(
+    hero.getByRole("link", { name: "Experimentar grátis" }),
+  ).toHaveAttribute("href", "/cadastro");
+  await hero.getByRole("link", { name: "Ver demonstração" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Demonstração do Impulsa" }),
+  ).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test("site público, demonstração responsiva, cookies e PWA", async ({
   page,
   context,
@@ -15,7 +69,7 @@ test("site público, demonstração responsiva, cookies e PWA", async ({
   });
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: /Organize seus clientes, orçamentos e recebimentos/ }),
+    page.getByRole("heading", { name: /Organize seu negócio em um só lugar/ }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Rejeitar opcionais" }).click();
   await expect(
@@ -54,10 +108,13 @@ test("site público, demonstração responsiva, cookies e PWA", async ({
     path: `test-results/home-${info.project.name}.png`,
     fullPage: true,
   });
-  await page.getByRole("link", { name: "Conhecer o painel" }).click();
-  await expect(page.getByText("Demonstração somente leitura")).toBeVisible();
+  await page
+    .locator(".landing-hero")
+    .getByRole("link", { name: "Ver demonstração" })
+    .click();
+  await expect(page.getByText("Dados fictícios")).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Seu negócio começa aqui." }),
+    page.getByRole("heading", { name: "Demonstração do Impulsa" }),
   ).toBeVisible();
   expect(
     await page.evaluate(
@@ -68,10 +125,17 @@ test("site público, demonstração responsiva, cookies e PWA", async ({
     path: `test-results/dashboard-${info.project.name}.png`,
     fullPage: true,
   });
-  await page
-    .getByRole("button", { name: "Novo orçamento", exact: true })
-    .click();
-  await expect(page.getByRole("status")).toContainText("somente leitura");
+  await page.getByRole("button", { name: "Orçamentos", exact: true }).click();
+  await page.getByRole("button", { name: "Simular aprovação" }).click();
+  await expect(page.getByRole("status")).toContainText("Orçamento aprovado");
+  await page.getByRole("button", { name: "Financeiro", exact: true }).click();
+  await expect(page.getByText("Armário sob medida")).toBeVisible();
+  await page.getByRole("button", { name: "Simular recebimento" }).click();
+  await page.getByRole("button", { name: "Visão geral" }).click();
+  await expect(page.locator(".sample-kpis")).toContainText("5.540,00");
+  await expect(page.locator(".sample-kpis")).toContainText("2.640,00");
+  await page.getByRole("button", { name: "Reiniciar" }).click();
+  await expect(page.locator(".sample-kpis")).toContainText("4.860,00");
   const manifest = await (
     await context.request.get("/manifest.webmanifest")
   ).json();

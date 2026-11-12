@@ -16,7 +16,7 @@ test("teclado, nomes acessíveis e contraste das telas principais", async ({
   ).toEqual([]);
   await page.goto("/demonstracao");
   await expect(
-    page.getByRole("heading", { name: "Seu negócio começa aqui." }),
+    page.getByRole("heading", { name: "Demonstração do Impulsa" }),
   ).toBeVisible();
   result = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
@@ -32,7 +32,7 @@ test("teclado, nomes acessíveis e contraste das telas principais", async ({
     await page.evaluate(() => document.activeElement !== document.body),
   ).toBe(true);
 });
-test("preferência do dispositivo, persistência e diálogo no tema escuro", async ({
+test("preferência do dispositivo, persistência e demonstração no tema escuro", async ({
   page,
 }) => {
   await page.emulateMedia({ colorScheme: "dark" });
@@ -55,7 +55,9 @@ test("preferência do dispositivo, persistência e diálogo no tema escuro", asy
       })),
     );
   expect(await audit()).toEqual([]);
-  await page.getByRole("button", { name: "Buscar no seu negócio" }).click();
-  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("button", { name: "Orçamentos", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Simular aprovação" }),
+  ).toBeVisible();
   expect(await audit()).toEqual([]);
 });

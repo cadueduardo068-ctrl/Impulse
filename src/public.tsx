@@ -1,6 +1,7 @@
+import { DemoPanel } from "./public-demo";
 import { ThemeButton } from "./theme";
-import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -10,7 +11,8 @@ import {
   Menu,
   ChartNoAxesCombined,
   Users,
-  Package,
+  Play,
+  X,
   CalendarDays,
   ChevronDown,
 } from "lucide-react";
@@ -87,140 +89,185 @@ function PublicHeader() {
     </header>
   );
 }
-export function PublicSite() {
-  const [config, setConfig] = useState<any>(null);
+const landingLinks = [
+  ["funcionalidades", "Funcionalidades"],
+  ["solucoes", "Para seu negócio"],
+  ["como-funciona", "Como funciona"],
+  ["planos", "Planos"],
+] as const;
+
+function LandingHeader() {
+  const { pathname } = useLocation();
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState("");
+  const [scrolled, setScrolled] = useState(false);
+  const toggle = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    void api("/config").then(setConfig);
+    const update = () => {
+      setScrolled(window.scrollY > 8);
+      if (pathname !== "/") return;
+      const current = [...landingLinks].reverse().find(([id]) => {
+        const section = document.getElementById(id);
+        return section && section.getBoundingClientRect().top <= 128;
+      });
+      setActive(current?.[0] ?? "");
+    };
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, [pathname]);
+  return (
+    <header
+      className={scrolled ? "landing-header is-scrolled" : "landing-header"}
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && open) {
+          setOpen(false);
+          toggle.current?.focus();
+        }
+      }}
+    >
+      <div className="landing-header-inner">
+        <Logo />
+        <nav
+          id="landing-navigation"
+          aria-label="Navegação principal"
+          className={open ? "landing-nav is-open" : "landing-nav"}
+        >
+          {landingLinks.map(([id, label]) => (
+            <a
+              key={id}
+              href={pathname === "/" ? "#" + id : "/#" + id}
+              aria-current={active === id ? "location" : undefined}
+              onClick={() => setOpen(false)}
+            >
+              {label}
+            </a>
+          ))}
+          <Link
+            className="landing-mobile-signin"
+            to="/entrar"
+            onClick={() => setOpen(false)}
+          >
+            Entrar
+          </Link>
+          <Link className="landing-mobile-trial" to="/cadastro">
+            Experimentar grátis
+          </Link>
+        </nav>
+        <div className="landing-actions">
+          <ThemeButton />
+          <Link className="landing-signin" to="/entrar">
+            Entrar
+          </Link>
+          <Link className="landing-pill" to="/cadastro">
+            Experimentar grátis <ArrowUpRight size={15} aria-hidden="true" />
+          </Link>
+          <button
+            ref={toggle}
+            type="button"
+            className="icon-button landing-menu"
+            aria-label={open ? "Fechar menu" : "Abrir menu"}
+            aria-expanded={open}
+            aria-controls="landing-navigation"
+            onClick={() => setOpen(!open)}
+          >
+            {open ? (
+              <X size={21} aria-hidden="true" />
+            ) : (
+              <Menu size={21} aria-hidden="true" />
+            )}
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+export function PublicDemo() {
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
   }, []);
   return (
-    <>
-      <PublicHeader />
+    <div className="impulsa-public">
+      <LandingHeader />
+      <main className="demo-page">
+        <div className="demo-intro">
+          <Link className="text-link" to="/">
+            Voltar ao início
+          </Link>
+          <h1>Demonstração do Impulsa</h1>
+          <p>
+            Explore o painel de uma marcenaria fictícia. Aprove um orçamento e
+            registre um recebimento para ver os valores mudarem no resumo.
+          </p>
+        </div>
+        <DemoPanel />
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+type PublicConfig = {
+  trialDays: number;
+  plans: Record<
+    string,
+    { name: string; cents: number; members: number; records: number }
+  >;
+};
+
+export function PublicSite() {
+  const [config, setConfig] = useState<PublicConfig | null>(null);
+  useEffect(() => {
+    void api("/config")
+      .then(setConfig)
+      .catch(() => {});
+  }, []);
+  return (
+    <div className="impulsa-public">
+      <LandingHeader />
       <main>
-        <section className="hero">
-          <div className="hero-copy">
-            <div className="eyebrow">
-              <span /> MENOS IMPROVISO. MAIS POSSIBILIDADES.
-            </div>
-            <h1>
-              Organize seus clientes, orçamentos e recebimentos{" "}
-              <span>em um só lugar</span>
-            </h1>
-            <p>
-              Do primeiro orçamento ao próximo passo: conecte clientes, rotina e
-              finanças em um só lugar. Do seu jeito, no ritmo do seu negócio.
-            </p>
-            <div className="hero-buttons">
-              <Link className="button primary large" to="/cadastro">
-                Criar minha conta <ArrowUpRight size={18} />
-              </Link>
-              <Link className="text-link" to="/demonstracao">
-                Conhecer o painel <ArrowRight size={17} />
-              </Link>
-            </div>
-            <div className="hero-notes">
-              <span>
-                <Check size={15} /> Sem cartão de crédito
-              </span>
-              <span>
-                <Check size={15} /> Para várias profissões
-              </span>
-            </div>
-          </div>
-          <div className="hero-preview">
-            <div className="preview-label">
-              <span className="status-dot" /> UMA VISÃO DO SEU DIA{" "}
-              <span>Demonstração ilustrativa</span>
-            </div>
-            <div className="mini-app">
-              <aside>
-                <span className="mini-logo">i.</span>
-                {[
-                  Layers,
-                  Users,
-                  Package,
-                  CalendarDays,
-                  ChartNoAxesCombined,
-                ].map((Icon, i) => (
-                  <span key={i} className={i === 0 ? "selected" : ""}>
-                    <Icon size={18} />
-                  </span>
-                ))}
-              </aside>
-              <div className="mini-body">
-                <div className="mini-heading">
-                  <div>
-                    <small>SEU NEGÓCIO, EM MOVIMENTO</small>
-                    <h3>Mais clareza para começar.</h3>
-                  </div>
-                  <span className="mini-avatar">VC</span>
-                </div>
-                <div className="mini-stats">
-                  <div>
-                    <small>Saldo realizado</small>
-                    <strong>R$ 0,00</strong>
-                    <span>Você constrói a partir daqui</span>
-                  </div>
-                  <div>
-                    <small>Próximos passos</small>
-                    <strong>Seu primeiro cliente</strong>
-                    <span>Organize cada oportunidade</span>
-                  </div>
-                </div>
-                <div className="mini-chart">
-                  <div>
-                    <strong>Tudo começa com um passo.</strong>
-                    <small>
-                      Seus registros se transformam em uma visão real.
-                    </small>
-                  </div>
-                  <div className="chart-empty">
-                    <span />
-                    <span />
-                    <span />
-                    <span />
-                    <span />
-                  </div>
-                  <div className="mini-months">
-                    <span>CLIENTES</span>
-                    <span>PROPOSTAS</span>
-                    <span>ROTINA</span>
-                    <span>FINANÇAS</span>
-                  </div>
-                </div>
-                <div className="mini-task">
-                  <span className="check-ring">
-                    <Check size={17} />
-                  </span>
-                  <div>
-                    <strong>Um fluxo que faz sentido</strong>
-                    <small>Orçamento → execução → financeiro</small>
-                  </div>
-                  <ArrowUpRight size={19} />
-                </div>
+        <section className="landing-hero">
+          <div className="landing-color-field" aria-hidden="true" />
+          <div className="landing-hero-inner">
+            <div className="landing-copy">
+              <p className="landing-kicker">Gestão para pequenos negócios</p>
+              <h1>
+                Organize seu negócio <span>em um só lugar.</span>
+              </h1>
+              <p>
+                Gerencie clientes, envie orçamentos e acompanhe o que entrou e o
+                que falta receber. Do primeiro contato ao pagamento.
+              </p>
+              <div className="landing-cta">
+                <Link className="landing-pill" to="/cadastro">
+                  Experimentar grátis{" "}
+                  <ArrowUpRight size={17} aria-hidden="true" />
+                </Link>
+                <Link className="landing-demo-link" to="/demonstracao">
+                  <Play size={16} aria-hidden="true" /> Ver demonstração
+                </Link>
               </div>
+              {config && (
+                <p className="landing-trial">
+                  {config.trialDays} dias grátis, sem cartão.
+                </p>
+              )}
             </div>
-            <div className="preview-float">
-              <span>
-                <ShieldCheck size={21} />
-              </span>
-              <div>
-                <strong>Seu negócio no centro</strong>
-                <small>Ferramentas que se conectam à sua rotina</small>
+            <div className="landing-showcase">
+              <DemoPanel preview />
+              <div className="landing-quote" aria-hidden="true">
+                <span>
+                  <Layers size={19} /> PROPOSTA #014
+                </span>
+                <strong>Armário sob medida</strong>
+                <small>Ana Ribeiro</small>
+                <b>R$ 1.200,00</b>
+                <div>Aguardando aprovação</div>
               </div>
             </div>
           </div>
         </section>
-        <div className="profession-strip">
-          <span>PARA QUEM FAZ ACONTECER</span>
-          <span>Autônomos</span>
-          <i />
-          <span>Pequenos negócios</span>
-          <i />
-          <span>Equipes que crescem</span>
-          <span className="strip-end">
-            Uma plataforma. Muitas possibilidades. <ArrowUpRight size={17} />
-          </span>
-        </div>
         <section id="funcionalidades" className="section">
           <div className="section-head">
             <div>
@@ -267,8 +314,8 @@ export function PublicSite() {
                   </span>
                   <h3>{String(t)}</h3>
                   <p>{String(d)}</p>
-                  <Link to="/cadastro">
-                    Conhecer ferramenta <ArrowUpRight size={15} />
+                  <Link to="/demonstracao">
+                    Ver demonstração <ArrowUpRight size={15} />
                   </Link>
                 </article>
               );
@@ -384,27 +431,14 @@ export function PublicSite() {
           <div className="eyebrow">ESPAÇO PARA COMEÇAR E CRESCER</div>
           <h2>Uma escolha clara para cada momento.</h2>
           <p>
-            Preços provisórios. Teste de {config?.trialDays ?? 7} dias, até 500
-            registros e 10 pessoas. Sem cartão e sem renovação automática do
-            teste.
+            {config
+              ? "Teste de " +
+                config.trialDays +
+                " dias, até 500 registros e 10 pessoas. Sem cartão e sem renovação automática."
+              : "Consulte os valores dos planos ao acessar sua conta."}
           </p>
           <div className="pricing-grid">
-            {Object.entries(
-              config?.plans ?? {
-                essencial: {
-                  name: "Básico",
-                  cents: 4900,
-                  members: 1,
-                  records: 500,
-                },
-                completo: {
-                  name: "Premium",
-                  cents: 9900,
-                  members: 10,
-                  records: 10000,
-                },
-              },
-            ).map(([key, p]: any) => (
+            {Object.entries(config?.plans ?? {}).map(([key, p]) => (
               <article
                 key={key}
                 className={`price-card ${key === "completo" ? "highlight" : ""}`}
@@ -459,8 +493,12 @@ export function PublicSite() {
               <thead>
                 <tr>
                   <th scope="col">Área</th>
-                  <th scope="col">Básico</th>
-                  <th scope="col">Premium</th>
+                  <th scope="col">
+                    {config?.plans.essencial?.name ?? "Básico"}
+                  </th>
+                  <th scope="col">
+                    {config?.plans.completo?.name ?? "Premium"}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -543,7 +581,7 @@ export function PublicSite() {
         </section>
       </main>
       <Footer />
-    </>
+    </div>
   );
 }
 export function Footer() {

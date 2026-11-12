@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import {
   PublicSite,
+  PublicDemo,
   AuthPage,
   LegalPage,
   SharedQuote,
@@ -15,6 +16,7 @@ const Workspace = lazy(() =>
   import("./workspace").then((m) => ({ default: m.Workspace })),
 );
 import "./style.css";
+import "./public-design.css";
 import { api } from "./api";
 void api("/config")
   .then((c) => {
@@ -38,7 +40,7 @@ createRoot(document.getElementById("root")!).render(
             element={<AuthEmailCallback />}
           />
           <Route path="/app/*" element={<Workspace />} />
-          <Route path="/demonstracao" element={<Workspace demo />} />
+          <Route path="/demonstracao" element={<PublicDemo />} />
           <Route path="/proposta/:token" element={<SharedQuote />} />
           <Route path="/catalogo-publico/:token" element={<SharedCatalog />} />
           <Route path="/convite/:token" element={<Invitation />} />

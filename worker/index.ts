@@ -42,6 +42,14 @@ export default {
     upstream.search = url.search;
 
     const headers = new Headers(request.headers);
+    // Resolve the browser's opaque same-origin value at the public URL,
+    // before Better Auth sees the Render URL as the request URL.
+    if (
+      headers.get("origin") === "null" &&
+      headers.get("sec-fetch-site") === "same-origin"
+    ) {
+      headers.set("origin", url.origin);
+    }
     headers.delete("host");
     headers.delete("forwarded");
     headers.delete("x-forwarded-for");

@@ -9,7 +9,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import worker from "../worker/index.ts";
 
-const publicOrigin = "https://impulsa.example.test";
+const publicOrigin = "https://impulse.cadueduardo068.workers.dev";
 const backendOrigin = "https://api.example.test";
 const assets = { fetch: async () => new Response("SPA") };
 
@@ -55,8 +55,10 @@ test(
       env: {
         ...process.env,
         PORT: String(port),
-        APP_URL: publicOrigin,
-        NODE_ENV: "test",
+        APP_URL: publicOrigin + "/",
+        // Better Auth skips origin validation by default under NODE_ENV=test.
+        NODE_ENV: "development",
+        SERVE_BUILD: "true",
         HOST: "127.0.0.1",
         TEST_DB: "memory",
         DATABASE_URL: "",
@@ -96,6 +98,11 @@ test(
     t.mock.method(globalThis, "fetch", async (input, options) => {
       assert.equal(new URL(input.url).origin, backendOrigin);
       const request = new Request(input, options);
+      assert.equal(
+        request.headers.get("x-forwarded-host"),
+        new URL(publicOrigin).host,
+      );
+      assert.equal(request.headers.get("x-forwarded-proto"), "https");
       const url = new URL(request.url);
       const local = new URL(
         url.pathname + url.search,
@@ -104,7 +111,7 @@ test(
       return realFetch(new Request(local, request));
     });
     const env = { ASSETS: assets, IMPULSA_API_ORIGIN: backendOrigin };
-    const request = (route, method = "GET", data, cookie) =>
+    const request = (route, method = "GET", data, cookie, browserHeaders) =>
       worker.fetch(
         new Request(new URL(route, publicOrigin), {
           method,
@@ -112,6 +119,7 @@ test(
             origin: publicOrigin,
             ...(data ? { "content-type": "application/json" } : {}),
             ...(cookie ? { cookie } : {}),
+            ...browserHeaders,
           },
           body: data ? JSON.stringify(data) : undefined,
         }),
@@ -136,14 +144,46 @@ test(
     assert.ok(
       [404, 405].includes((await request("/api/auth/sign-up/email")).status),
     );
+    const signup = {
+      email,
+      password,
+      name: "Worker Test",
+      termsAccepted: true,
+      callbackURL: "/app",
+    };
+    for (const origin of ["https://other.example.test", "null"]) {
+      const forbidden = await request(
+        "/api/auth/sign-up/email",
+        "POST",
+        signup,
+        undefined,
+        {
+          origin,
+          "sec-fetch-site": "cross-site",
+          "sec-fetch-mode": "cors",
+          "x-forwarded-host": "other.example.test",
+          "x-forwarded-proto": "http",
+        },
+      );
+      assert.equal(forbidden.status, 403);
+      assert.equal(
+        (await forbidden.json()).code,
+        origin === "null" ? "MISSING_OR_NULL_ORIGIN" : "INVALID_ORIGIN",
+      );
+    }
+    const sameOrigin = {
+      origin: "null",
+      "sec-fetch-site": "same-origin",
+      "sec-fetch-mode": "cors",
+    };
     const created = await assertOk(
-      await request("/api/auth/sign-up/email", "POST", {
-        email,
-        password,
-        name: "Worker Test",
-        termsAccepted: true,
-        callbackURL: "/app",
-      }),
+      await request(
+        "/api/auth/sign-up/email",
+        "POST",
+        signup,
+        undefined,
+        sameOrigin,
+      ),
     );
     assert.equal(created.user.emailVerified, false);
     const verify = await request(await mailLink("Confirme"));
@@ -176,10 +216,16 @@ test(
     );
 
     await assertOk(
-      await request("/api/auth/request-password-reset", "POST", {
-        email,
-        redirectTo: publicOrigin + "/redefinir-senha",
-      }),
+      await request(
+        "/api/auth/request-password-reset",
+        "POST",
+        {
+          email,
+          redirectTo: publicOrigin + "/redefinir-senha",
+        },
+        undefined,
+        sameOrigin,
+      ),
     );
     const recovery = await request(await mailLink("Redefina"));
     assert.equal(recovery.status, 302);

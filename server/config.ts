@@ -1,6 +1,19 @@
 import { randomBytes } from "node:crypto";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 const production = process.env.NODE_ENV === "production";
+const appUrl = new URL(
+  process.env.APP_URL?.trim() || (production ? "" : "http://localhost:3000"),
+);
+if (
+  (appUrl.protocol !== "https:" &&
+    (production || appUrl.protocol !== "http:")) ||
+  appUrl.pathname !== "/" ||
+  appUrl.username ||
+  appUrl.password ||
+  appUrl.search ||
+  appUrl.hash
+)
+  throw new Error("APP_URL deve ser a origem pública do Impulsa");
 await mkdir(".data", { recursive: true });
 let secret = process.env.BETTER_AUTH_SECRET;
 if (!secret) {
@@ -35,8 +48,8 @@ if (
 
 if (
   production &&
-  (!process.env.APP_URL?.startsWith("https://") ||
-    (!supabaseUrl && (!process.env.SMTP_HOST || !process.env.MAIL_FROM)))
+  !supabaseUrl &&
+  (!process.env.SMTP_HOST || !process.env.MAIL_FROM)
 )
   throw new Error(
     "Configure HTTPS e um provedor de e-mail para autenticação em produção",
@@ -46,7 +59,7 @@ export const config = {
     supabaseUrl && supabaseKey ? { url: supabaseUrl, key: supabaseKey } : null,
   production,
   secret,
-  url: process.env.APP_URL ?? "http://localhost:3000",
+  url: appUrl.origin,
   port: Number(process.env.PORT ?? 3000),
   trialDays: Number(process.env.TRIAL_DAYS ?? 7),
   enforceMfa: production || process.env.ENFORCE_ADMIN_MFA === "true",

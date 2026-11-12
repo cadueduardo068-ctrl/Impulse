@@ -2,6 +2,7 @@
   "name": "impulse",
   "main": "worker/index.ts",
   "compatibility_date": "2026-11-11",
+  "keep_vars": true,
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

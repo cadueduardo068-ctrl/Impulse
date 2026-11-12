@@ -12,11 +12,11 @@ a configuração existente e executando as rotinas de arquivos do projeto.
    `https://seu-dominio.com`. O Better Auth usa essa origem para validar
    requisições e gerar links que voltam ao site. Use essa mesma origem na
    lista de redirecionamentos do Supabase quando a integração estiver ativa.
-2. No Cloudflare, abra o Worker existente e defina a variável de execução
-   `IMPULSA_API_ORIGIN` com a origem HTTPS do **backend Node**. Use apenas
-   esquema e hostname, com porta quando necessário. O nome em
-   `wrangler.jsonc` deve corresponder ao Worker existente. `keep_vars` preserva
-   essa variável do painel nos próximos deploys.
+2. O `wrangler.jsonc` define a variável de execução `IMPULSA_API_ORIGIN` com a
+   origem HTTPS do backend Node no Render. Se mudar de hospedagem, atualize
+   essa origem no arquivo e publique novamente. Use apenas esquema e hostname,
+   com porta quando necessário. O nome do Worker deve corresponder ao serviço
+   existente no Cloudflare.
 3. Configure o build como `npm run build` e o deploy como
    `npx wrangler deploy`, a partir da pasta deste projeto. O Wrangler publica
    `worker/index.ts` junto com os arquivos de `dist`. As regras

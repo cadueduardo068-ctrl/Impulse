@@ -3,6 +3,9 @@
   "main": "worker/index.ts",
   "compatibility_date": "2026-11-11",
   "keep_vars": true,
+  "vars": {
+    "IMPULSA_API_ORIGIN": "https://impulse-u756.onrender.com",
+  },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

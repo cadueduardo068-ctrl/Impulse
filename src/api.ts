@@ -1,6 +1,14 @@
 import { createAuthClient } from "better-auth/react";
 import { twoFactorClient } from "better-auth/client/plugins";
-export const authClient = createAuthClient({ plugins: [twoFactorClient()] });
+export const authClient = createAuthClient({
+  // Pin the fetch URL so Better Auth cannot pick up a build-time server URL.
+  fetchOptions: {
+    baseURL: "/api/auth",
+    credentials: "same-origin",
+    redirect: "error",
+  },
+  plugins: [twoFactorClient()],
+});
 export class ApiError extends Error {
   constructor(
     message: string,
